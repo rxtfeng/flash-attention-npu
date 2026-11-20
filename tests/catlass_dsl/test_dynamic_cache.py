@@ -164,7 +164,7 @@ def _constant_score(factor):
 
 
 def test_callback_constants_and_aux_abi_isolation(device, compiler):
-    from .test_utils import check, oracle
+    from .test_utils import check, forward_golden
 
     programs = {factor: _constant_score(factor) for factor in (0.5, 0.75)}
     for step, (factor, stride, expected_compiles) in enumerate(
@@ -180,7 +180,7 @@ def test_callback_constants_and_aux_abi_isolation(device, compiler):
                 aux_tensors=(copy_aux_to_device(aux, device),),
                 return_lse=True,
             )
-            expected, logs = oracle(
+            expected, logs = forward_golden(
                 cpu,
                 score_mod=lambda s, b, h, q, k, i, a, c: s * factor + a[0][q],
                 aux_tensors=(aux,),

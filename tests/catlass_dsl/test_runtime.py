@@ -9,7 +9,14 @@ import pytest
 import torch
 import torch_npu
 
-from .test_utils import DTYPES, check, check_attention, copy_aux_to_device, make_inputs, oracle
+from .test_utils import (
+    DTYPES,
+    check,
+    check_attention,
+    copy_aux_to_device,
+    forward_golden,
+    make_inputs,
+)
 
 from flash_attn_npu_4.catlass_dsl import builtin, flash_attn_func, flash_attn_varlen_func, runtime
 from flash_attn_npu_4.catlass_dsl.cache_utils import get_jit_cache
@@ -108,7 +115,7 @@ def test_cross_stream_inputs_survive_early_release_and_reuse(device, dtype):
     consumer = torch.npu.Stream(device=device)
     shape = (1, 1024, 4, 128)
     cpu = tuple(torch.randn(shape, dtype=dtype) for _ in range(3))
-    expected, expected_lse = oracle(cpu)
+    expected, expected_lse = forward_golden(cpu)
     delay_done = torch.npu.Event()
     with torch.inference_mode(), torch.npu.stream(consumer):
         # Warm public operators before the race, including their allocations.
@@ -274,7 +281,7 @@ def test_attention_plan_eviction_and_clear(device, monkeypatch):
         cpu, inputs, _, _, _ = make_inputs(device, torch.float16, seed=903 + step)
         with torch.no_grad():
             out, lse = flash_attn_func(*inputs, return_lse=True)
-            expected, expected_lse = oracle(cpu)
+            expected, expected_lse = forward_golden(cpu)
         check(out, expected)
         check(lse, expected_lse)
         assert compiler.call_count == expected_compilations
